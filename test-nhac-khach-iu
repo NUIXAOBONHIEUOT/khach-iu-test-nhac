@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test nhạc cảm ơn — Khách iu</title>
+<style>
+:root{--pink:#fff0f5;--rose:#e85d91;--dark:#6c3150;--gold:#ffd447}*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#fff5f8,#fff9df);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--dark);min-height:100vh;padding:24px 14px}.wrap{max-width:620px;margin:auto}.card{background:#fff;border:1px solid #f8d9e5;border-radius:22px;padding:22px;margin:14px 0;box-shadow:0 8px 26px #8b456015}h1{text-align:center;font-size:25px;margin:10px 0}p{line-height:1.5}.bow{text-align:center;font-size:38px}label{display:block;font-weight:650;margin:13px 0 6px}input,textarea{width:100%;border:1px solid #e8c6d5;border-radius:12px;padding:12px;font:inherit;background:#fffdfd}textarea{min-height:100px;resize:vertical}button{border:0;border-radius:999px;padding:12px 17px;background:var(--rose);color:white;font-size:15px;font-weight:700;cursor:pointer;margin:8px 6px 0 0}button.secondary{background:#ffe9f1;color:#8c3659}button:disabled{opacity:.5;cursor:wait}.note{font-size:13px;color:#85566a}.status{padding:12px;border-radius:12px;background:#fff4d1;margin-top:12px;white-space:pre-wrap}.status.error{background:#ffe7e7;color:#8a2222}.status.ok{background:#e9faee;color:#205d35}.hide{display:none}.player{width:100%;margin-top:14px}.popup{position:fixed;inset:0;background:#4a203b80;display:flex;align-items:center;justify-content:center;padding:18px;z-index:10}.popup.hide{display:none}.popupbox{background:white;border-radius:25px;padding:28px 22px;text-align:center;max-width:380px;width:100%;box-shadow:0 20px 70px #33102040}.heart{font-size:45px;color:#e85d91}.popupbox h2{font-size:22px;margin:8px 0}.tiny{font-size:12px;color:#986d7f}
+</style>
+</head>
+<body><main class="wrap">
+<div class="bow">🎀 💛 🎀</div><h1>Khách iu — thử nhạc cảm ơn</h1>
+<p style="text-align:center">Trang thử riêng, không có đăng nhập, không gọi chức năng cộng vote và không sửa dữ liệu User.</p>
+<div class="card"><h2>1. Kết nối kho nhạc MUSIC</h2>
+<label for="project">Supabase Project URL</label><input id="project" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+<label for="key">Publishable key</label><input id="key" placeholder="sb_publishable_PUKF4qZFIN_VKADuEa4nng_Tz9ss-MY" autocomplete="off" spellcheck="false">
+<label for="bucket">Tên bucket</label><input id="bucket" value="MUSIC">
+<button id="load">Tải danh sách nhạc</button><div id="status" class="status">Nhập Project URL và Publishable key rồi bấm “Tải danh sách nhạc”.</div>
+<p class="note">Key chỉ được dùng trong trang thử này để đọc danh sách file. Trang không lưu key. Nếu bucket không cho phép liệt kê file, dùng cách dán link công khai ở mục 2.</p>
+</div>
+<div class="card"><h2>2. Hoặc dán link nhạc công khai</h2><p class="note">Mỗi dòng một link file nhạc công khai trong Supabase Storage.</p><textarea id="urls" placeholder="https://xxxxx.supabase.co/storage/v1/object/public/MUSIC/ten-bai-hat.mp3"></textarea><button id="useUrls" class="secondary">Dùng các link này</button></div>
+<div class="card"><h2>3. Thử popup và phát nhạc</h2><p id="count">Chưa có bài nhạc được tải.</p><button id="test" disabled>🎵 Thử cảm ơn & phát bài ngẫu nhiên</button><audio id="audio" class="player" controls></audio><div id="playStatus" class="status">Chưa phát nhạc.</div></div>
+<p class="tiny" style="text-align:center">Bản thử giao diện — không cộng vote thật.</p>
+</main>
+<div id="popup" class="popup hide"><div class="popupbox"><div class="heart">♥</div><h2>Cảm ơn đã vote cho Nam iu iu 💛</h2><p id="songName">Bài nhạc dành tặng khách iu 🎶</p><button id="popupPlay">▶ Phát nhạc</button><button id="close" class="secondary">Đóng</button></div></div>
+<script>
+const $=id=>document.getElementById(id);let songs=[];let lastSong='';
+const audioExtensions=/\.(mp3|m4a|wav|ogg|aac|flac|webm)(\?|$)/i;
+function setStatus(msg,type=''){ $('status').textContent=msg;$('status').className='status '+type; }
+function setSongs(items){songs=items.filter(x=>x&&x.url&&audioExtensions.test(x.url));$('count').textContent=songs.length?`Đã tìm thấy ${songs.length} bài nhạc.`:'Chưa tìm thấy file nhạc có định dạng phổ biến.';$('test').disabled=!songs.length;}
+$('load').addEventListener('click',async()=>{let base=$('project').value.trim().replace(/\/$/,''),key=$('key').value.trim(),bucket=$('bucket').value.trim();if(!base||!key||!bucket){setStatus('Bà nhập đủ Project URL, Publishable key và tên bucket nha.','error');return}if(!/^https:\/\//i.test(base)){setStatus('Project URL cần bắt đầu bằng https://','error');return}$('load').disabled=true;setStatus('Đang đọc danh sách file nhạc…');try{let res=await fetch(`${base}/storage/v1/object/list/${encodeURIComponent(bucket)}`,{method:'POST',headers:{'apikey':key,'Authorization':`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({prefix:'',limit:100,offset:0,sortBy:{column:'name',order:'asc'}})});let data=await res.json();if(!res.ok)throw new Error(data.message||data.error||`HTTP ${res.status}`);let found=[];function walk(items,prefix=''){for(const f of items||[]){if(f.name){let path=prefix?`${prefix}/${f.name}`:f.name;if(f.id||f.metadata){if(audioExtensions.test(f.name)){found.push({name:f.name,url:`${base}/storage/v1/object/public/${encodeURIComponent(bucket)}/${path.split('/').map(encodeURIComponent).join('/')}`})}}else if(f.name && f.id===undefined && f.metadata===undefined){/* folder placeholder; nested folders are not auto-enumerated */}}}}walk(data);if(!found.length)throw new Error('Danh sách trả về chưa có file nhạc ở thư mục gốc. Nếu file nằm trong thư mục con hoặc không có quyền list, bà dán link công khai ở mục 2 nha.');setSongs(found);setStatus(`Đã đọc được ${found.length} bài. Bấm nút thử phát nhạc bên dưới nha.`,'ok')}catch(e){setStatus(`Chưa đọc được danh sách nhạc: ${e.message}\n\nBà có thể thử dán link file công khai vào mục 2. Bucket Public không tự động có quyền liệt kê danh sách file.`,'error')}finally{$('load').disabled=false}});
+$('useUrls').addEventListener('click',()=>{const arr=$('urls').value.split(/\n+/).map(s=>s.trim()).filter(Boolean).map(url=>({name:decodeURIComponent(url.split('/').pop().split('?')[0]||'Bài nhạc'),url}));setSongs(arr);setStatus(arr.length?`Đã nhận ${songs.length} link. Bấm nút thử phát.`:'Bà chưa dán link nào nha.',arr.length?'ok':'error')});
+function chooseSong(){let options=songs.filter(s=>s.url!==lastSong);if(!options.length)options=songs;return options[Math.floor(Math.random()*options.length)]}
+async function playSelected(){if(!songs.length)return;let song=chooseSong();lastSong=song.url;$('songName').textContent=song.name;$('audio').src=song.url;$('popup').classList.remove('hide');$('playStatus').textContent=`Đang thử phát: ${song.name}`;try{await $('audio').play();$('playStatus').textContent=`Đang phát: ${song.name} 💛`;}catch(e){$('playStatus').textContent='Trình duyệt chưa tự phát nhạc. Bấm “Phát nhạc” trong popup hoặc nút Play trên trình phát nhé.';}}
+$('test').addEventListener('click',playSelected);$('popupPlay').addEventListener('click',async()=>{try{await $('audio').play();$('playStatus').textContent='Đang phát nhạc 💛'}catch(e){$('playStatus').textContent='Chưa phát được. Kiểm tra link công khai và định dạng file nhạc nhé.'}});$('close').addEventListener('click',()=>$('popup').classList.add('hide'));
+</script></body></html>
+
+
+
+
+
